@@ -27,8 +27,7 @@ const uniqCurrenciesList = computed(() =>
 const totalCost = computed(() =>
   dataStorage.items
     .filter((item) => item.selected)
-    .map((item) => convertItemPriceToSelectedCurrency(item))
-    .reduce((acc, item) => acc + item, 0)
+    .reduce((acc, item) => acc + convertItemPriceToSelectedCurrency(item), 0)
 )
 
 const howManyItemsSelected = computed(
