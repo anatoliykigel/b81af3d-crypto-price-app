@@ -1,8 +1,13 @@
 <script setup>
 import { reactive, onMounted, computed } from 'vue'
+import { helper_nFormatter, helper_numberToLocaleString } from './helpers/number-helpers'
 
 import LoadingSpinner from './components/LoadingSpinner.vue'
 import LoadingDataError from './components/LoadingDataError.vue'
+
+/*
+ * Main App State
+ */
 
 const dataStorage = reactive({
   items: [],
@@ -11,23 +16,9 @@ const dataStorage = reactive({
   loadingDataError: false
 })
 
-const helper_numberToLocaleFormat = (value) =>
-  value.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 4
-  })
-
-const helper_convertPriceOfItem = (item) =>
-  (dataStorage.exchangeRates[`${item.currency}-${dataStorage.selectedCurrency}`] ?? 1) * item.price
-
-const helper_nFormatter = (value) => {
-  if (value >= 1_000_000)
-    return Number.parseFloat((value / 1_000_000).toFixed(1)).toLocaleString() + 'M'
-
-  if (value >= 1_000) return Number.parseFloat((value / 1_000).toFixed(1)).toLocaleString() + 'K'
-  console.log(value, typeof value)
-  return helper_numberToLocaleFormat(value)
-}
+/*
+ * Computeds Depends on Main State
+ */
 
 const uniqCurrenciesList = computed(() =>
   [...new Set(dataStorage.items.map((item) => item.currency))].sort()
@@ -36,9 +27,28 @@ const uniqCurrenciesList = computed(() =>
 const totalCost = computed(() =>
   dataStorage.items
     .filter((item) => item.selected)
-    .map((item) => helper_convertPriceOfItem(item))
+    .map((item) => convertItemPriceToSelectedCurrency(item))
     .reduce((acc, item) => acc + item, 0)
 )
+
+const howManyItemsSelected = computed(
+  () => dataStorage.items.filter((item) => item.selected).length
+)
+
+const isAllItemsSelected = computed(() => howManyItemsSelected.value === dataStorage.items.length)
+
+/*
+ * Helper Methods for State
+ */
+
+const convertItemPriceToSelectedCurrency = (item) =>
+  (dataStorage.exchangeRates[`${item.currency}-${dataStorage.selectedCurrency}`] ?? 1) * item.price
+
+const selectAllItems = () => dataStorage.items.forEach((item) => (item.selected = true))
+
+/*
+ * Data Loading and Putting in State
+ */
 
 onMounted(async () => {
   try {
@@ -59,14 +69,6 @@ onMounted(async () => {
     dataStorage.loadingDataError = true
   }
 })
-
-const selectAllItems = () => dataStorage.items.forEach((item) => (item.selected = true))
-
-const howManyItemsSelected = computed(
-  () => dataStorage.items.filter((item) => item.selected).length
-)
-
-const isAllItemsSelected = computed(() => howManyItemsSelected.value === dataStorage.items.length)
 </script>
 
 <template>
@@ -122,18 +124,18 @@ const isAllItemsSelected = computed(() => howManyItemsSelected.value === dataSto
                   d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"
                 />
               </svg>
-              <span class="mr-2 text-gray-400" :class="{ 'text-gray-800': item.selected }">
+              <span class="mr-1 text-gray-400" :class="{ 'text-gray-800': item.selected }">
                 Item #{{ item.id }}
               </span>
 
               <span
-                class="bg-green-100 text-green-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
+                class="bg-green-100 text-green-800 text-xs font-medium mr-1 px-2.5 py-0.5 rounded"
                 :class="{ 'bg-green-200': item.selected }"
               >
-                {{ helper_numberToLocaleFormat(item.price) }}
+                {{ helper_numberToLocaleString(item.price) }}
               </span>
               <span
-                class="bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
+                class="bg-blue-100 text-blue-800 text-xs font-medium mr-1 px-2.5 py-0.5 rounded"
                 :class="{ 'bg-blue-200': item.selected }"
               >
                 {{ item.currency }}
@@ -142,10 +144,10 @@ const isAllItemsSelected = computed(() => howManyItemsSelected.value === dataSto
                 v-if="
                   dataStorage.selectedCurrency && dataStorage.selectedCurrency !== item.currency
                 "
-                class="bg-yellow-100 text-yellow-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded"
+                class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded"
                 :class="{ 'bg-yellow-200': item.selected }"
               >
-                ~ {{ helper_nFormatter(helper_convertPriceOfItem(item)) }} in
+                ~ {{ helper_nFormatter(convertItemPriceToSelectedCurrency(item)) }} in
                 {{ dataStorage.selectedCurrency }}
               </span>
             </li>
@@ -195,7 +197,7 @@ const isAllItemsSelected = computed(() => howManyItemsSelected.value === dataSto
               <span
                 class="text-xl bg-green-100 text-green-800 text-lg font-medium px-2 py-0.5 mr-2 rounded border border-green-400"
               >
-                {{ helper_numberToLocaleFormat(totalCost) }}
+                {{ helper_numberToLocaleString(totalCost) }}
               </span>
               <span
                 class="text-xl bg-blue-100 text-blue-800 text-lg font-medium px-2 py-0.5 rounded border border-blue-400"
